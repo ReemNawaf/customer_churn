@@ -1,0 +1,19 @@
+data:
+  raw_path: "data/raw/customer_churn.json"
+  processed_path: "data/processed/churn_clean.parquet"
+  labeled_path: "data/processed/churn_labels.parquet"
+  features_path: "data/processed/features.joblib"
+  profile_report: "data/processed/profile.html"
+
+model:
+  type: "xgboost"
+  test_size: 0.2
+  random_state: 42
+
+api:
+  host: "0.0.0.0"
+  port: 8000
+
+window:
+  feature_days: 31    # length of feature window in days
+  target_days: 31       # length of target window in days

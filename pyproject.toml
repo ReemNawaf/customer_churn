@@ -4,7 +4,13 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "black>=25.9.0",
+    "pandas>=2.3.3",
+    "pyarrow>=21.0.0",
+    "setuptools>=80.9.0",
+    "ydata-profiling>=4.17.0",
+]
 
 [dependency-groups]
 dev = [
@@ -13,12 +19,15 @@ dev = [
     "ruff>=0.13.3",
 ]
 
+[flake8]
+max-line-length = 200
+
 [tool.black]
-line-length = 88
+line-length = 200
 target-version = ["py311"]
 
 [tool.ruff]
-line-length = 88
+line-length = 200
 extend-select = ["I"]           # enable import-sorting rules
-extend-ignore = ["E501"]        # example: ignore long-line warnings if you want
+extend-ignore = ["E501", "E203"]        # example: ignore long-line warnings if you want
 fix = true                      # allow auto-fix

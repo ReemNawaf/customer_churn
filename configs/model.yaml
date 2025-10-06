@@ -1,0 +1,8 @@
+target: "churn"
+split:
+  test_size: 0.2
+  val_size: 0.1
+  random_state: 42
+features:
+  numeric: ["tenure", "monthly_charges", "total_charges"]
+  categorical: ["gender", "contract_type", "internet_service"]
