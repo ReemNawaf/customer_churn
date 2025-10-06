@@ -1,0 +1,24 @@
+[project]
+name = "customer-churn"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "black>=25.9.0",
+    "pre-commit>=4.3.0",
+    "ruff>=0.13.3",
+]
+
+[tool.black]
+line-length = 88
+target-version = ["py311"]
+
+[tool.ruff]
+line-length = 88
+extend-select = ["I"]           # enable import-sorting rules
+extend-ignore = ["E501"]        # example: ignore long-line warnings if you want
+fix = true                      # allow auto-fix
