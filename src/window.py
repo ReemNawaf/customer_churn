@@ -71,7 +71,7 @@ def label_churn(
     user_last = df.groupby(user_col, as_index=False)[ts_col].max().rename(columns={ts_col: "last_ts_dt"})
 
     # Flag churn if no activity after cutoff
-    user_last["churn"] = user_last["last_ts_dt"].apply(lambda last_ts: 1 if last_ts < target_start else 0)
+    user_last["churn"] = user_last["last_ts_dt"].apply(lambda last_ts: 1 if last_ts < (target_start + pd.Timedelta(days=1)) else 0)
 
     # Keep only userId and churn
     return user_last[[user_col, "churn"]]
