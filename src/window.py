@@ -1,12 +1,15 @@
 # src/label_churn.py
 from __future__ import annotations
 
+import os
+import sys
 from datetime import timedelta
 from pathlib import Path
 
 import pandas as pd
 from dateutil.relativedelta import relativedelta
 
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from src.config import cfg
 from src.logger import get_logger
 
@@ -52,7 +55,14 @@ def label_churn(
     target_start: pd.Timestamp | None = None,
     target_end: pd.Timestamp | None = None,
 ) -> pd.DataFrame:
-    """Label each user as churn(1) or active(0) based on activity in the target window."""
+    """
+    Label each user as churn(1) or active(0) based on activity in the target window.
+
+    Returns
+    -------
+    pd.DataFrame
+        Columns: [userId, churn]
+    """
 
     if target_start is None or target_end is None:
         raise ValueError("Must provide target_start and target_end dates")
@@ -60,15 +70,14 @@ def label_churn(
     # Aggregate User Last Activity
     user_last = df.groupby(user_col, as_index=False)[ts_col].max().rename(columns={ts_col: "last_ts_dt"})
 
-    # Flag churn if no activity in [target_start, target_end]
-    def assign_label(last_ts):
-        return 1 if last_ts < target_start else 0
+    # Flag churn if no activity after cutoff
+    user_last["churn"] = user_last["last_ts_dt"].apply(lambda last_ts: 1 if last_ts < target_start else 0)
 
-    user_last["churn"] = user_last["last_ts_dt"].apply(assign_label)
-    return user_last
+    # Keep only userId and churn
+    return user_last[[user_col, "churn"]]
 
 
-if __name__ == "__main__":
+def main():
     # 1. Load cleaned parquet
     path = f"{Path().resolve()}/{cfg['data']['processed_path']}"
     df = pd.read_parquet(path)
@@ -99,3 +108,7 @@ if __name__ == "__main__":
     log.info(f"Saved churn labels → {out_path}")
     print(churn_df.head())
     print(churn_df["churn"].value_counts())
+
+
+if __name__ == "__main__":
+    main()

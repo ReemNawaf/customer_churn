@@ -6,9 +6,13 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "black>=25.9.0",
+    "matplotlib>=3.10.0",
     "pandas>=2.3.3",
     "pyarrow>=21.0.0",
+    "scikit-learn==1.5.2",
+    "seaborn>=0.13.2",
     "setuptools>=80.9.0",
+    "xgboost==2.1.2",
     "ydata-profiling>=4.17.0",
 ]
 
