@@ -40,7 +40,7 @@ def build_all_features(df_logs: pd.DataFrame, cutoff_date: pd.Timestamp) -> pd.D
     """
     Main pipeline: orchestrates all feature groups and returns full user-level matrix.
     """
-    # 1. Filter to feature window
+    # 1. Filter to feature window, to avoid data leakage
     df_feat = df_logs[df_logs["ts_dt"] <= cutoff_date].copy()
 
     # 2. Build each feature block
