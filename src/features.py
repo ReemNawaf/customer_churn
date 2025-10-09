@@ -577,21 +577,9 @@ def build_account_features(df: pd.DataFrame, cutoff_date: pd.Timestamp) -> pd.Da
     time_as_paid_days = d.groupby("userId").apply(calc_time_as_paid, include_groups=False).rename("time_as_paid_days")
 
     # ------------------------------------------------
-    # 4. Auth failure ratio
+    # 4. Merge all
     # ------------------------------------------------
-    def calc_auth_fail_ratio(g: pd.DataFrame) -> float:
-        total = len(g)
-        if total == 0:
-            return 0.0
-        fails = g["auth"].str.lower().isin(["logout", "cancelled", "error", "fail"]).sum()
-        return round(fails / total, 3)
-
-    auth_fail_ratio = d.groupby("userId").apply(calc_auth_fail_ratio, include_groups=False).rename("auth_fail_ratio")
-
-    # ------------------------------------------------
-    # 5. Merge all
-    # ------------------------------------------------
-    feats = pd.concat([current_level, level_changes, time_as_paid_days, auth_fail_ratio], axis=1).reset_index()
+    feats = pd.concat([current_level, level_changes, time_as_paid_days], axis=1).reset_index()
 
     return feats
 
