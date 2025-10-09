@@ -1,0 +1,15 @@
+artifact_uri: mlflow-artifacts:/685758591350241475/56c68c8adc4a46dab04ab41e0cc6dd5b/artifacts
+deleted_time: 1759994159943
+end_time: 1759993966793
+entry_point_name: ''
+experiment_id: '685758591350241475'
+lifecycle_stage: deleted
+run_id: 56c68c8adc4a46dab04ab41e0cc6dd5b
+run_name: grandiose-cub-655
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1759993965661
+status: 3
+tags: []
+user_id: reem

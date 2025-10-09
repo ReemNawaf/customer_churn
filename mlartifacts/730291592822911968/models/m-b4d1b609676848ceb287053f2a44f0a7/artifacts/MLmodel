@@ -1,0 +1,58 @@
+artifact_path: mlflow-artifacts:/730291592822911968/models/m-b4d1b609676848ceb287053f2a44f0a7/artifacts
+flavors:
+  python_function:
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.sklearn
+    model_path: model.pkl
+    predict_fn: predict
+    python_version: 3.11.13
+  sklearn:
+    code: null
+    pickled_model: model.pkl
+    serialization_format: cloudpickle
+    sklearn_version: 1.5.2
+is_signature_from_type_hint: false
+mlflow_version: 3.4.0
+model_id: m-b4d1b609676848ceb287053f2a44f0a7
+model_size_bytes: 506225
+model_uuid: m-b4d1b609676848ceb287053f2a44f0a7
+prompts: null
+run_id: f6fdbc05f2894c108d54ab40261f37a5
+saved_input_example_info:
+  artifact_path: input_example.json
+  pandas_orient: split
+  serving_input_path: serving_input_example.json
+  type: dataframe
+signature:
+  inputs: '[{"type": "string", "name": "gender", "required": true}, {"type": "string",
+    "name": "region", "required": false}, {"type": "string", "name": "device", "required":
+    true}, {"type": "long", "name": "tenure_days", "required": true}, {"type": "string",
+    "name": "signup_cohort", "required": true}, {"type": "string", "name": "account_age_group",
+    "required": true}, {"type": "long", "name": "last_ts_dt", "required": true}, {"type":
+    "long", "name": "freq_7d", "required": true}, {"type": "long", "name": "freq_30d",
+    "required": true}, {"type": "long", "name": "freq_90d", "required": true}, {"type":
+    "double", "name": "active_days_ratio", "required": true}, {"type": "long", "name":
+    "longest_gap_days", "required": true}, {"type": "double", "name": "weekend_ratio",
+    "required": true}, {"type": "double", "name": "night_ratio", "required": true},
+    {"type": "double", "name": "weekly_mean", "required": true}, {"type": "double",
+    "name": "weekly_std", "required": true}, {"type": "double", "name": "weekly_var",
+    "required": true}, {"type": "double", "name": "activity_slope", "required": true},
+    {"type": "double", "name": "momentum_ratio", "required": true}, {"type": "long",
+    "name": "total_sessions", "required": true}, {"type": "double", "name": "avg_session_len_min",
+    "required": true}, {"type": "double", "name": "std_session_len_min", "required":
+    true}, {"type": "double", "name": "total_play_time_min", "required": true}, {"type":
+    "double", "name": "sessions_per_active_day", "required": true}, {"type": "long",
+    "name": "unique_pages", "required": true}, {"type": "long", "name": "unique_songs",
+    "required": true}, {"type": "long", "name": "unique_artists", "required": true},
+    {"type": "double", "name": "diversity_ratio", "required": true}, {"type": "string",
+    "name": "current_level", "required": true}, {"type": "long", "name": "level_changes",
+    "required": true}, {"type": "double", "name": "time_as_paid_days", "required":
+    true}, {"type": "double", "name": "engagement_ratio", "required": true}, {"type":
+    "double", "name": "diversity_per_session", "required": true}, {"type": "double",
+    "name": "session_len_change_pct", "required": true}]'
+  outputs: '[{"type": "long", "name": "churn", "required": true}]'
+  params: null
+type_hint_from_example: false
+utc_time_created: '2025-10-09 15:02:54.393255'

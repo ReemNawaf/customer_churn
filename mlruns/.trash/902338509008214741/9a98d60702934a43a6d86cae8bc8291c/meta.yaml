@@ -1,0 +1,15 @@
+artifact_uri: mlflow-artifacts:/902338509008214741/9a98d60702934a43a6d86cae8bc8291c/artifacts
+deleted_time: 1760021533723
+end_time: 1760021504308
+entry_point_name: ''
+experiment_id: '902338509008214741'
+lifecycle_stage: deleted
+run_id: 9a98d60702934a43a6d86cae8bc8291c
+run_name: GradientBoosting_training_run
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1760021502117
+status: 3
+tags: []
+user_id: reem

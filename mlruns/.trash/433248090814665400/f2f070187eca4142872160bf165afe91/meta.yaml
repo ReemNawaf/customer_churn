@@ -1,0 +1,15 @@
+artifact_uri: mlflow-artifacts:/433248090814665400/f2f070187eca4142872160bf165afe91/artifacts
+deleted_time: 1759990942921
+end_time: 1759990625146
+entry_point_name: ''
+experiment_id: '433248090814665400'
+lifecycle_stage: deleted
+run_id: f2f070187eca4142872160bf165afe91
+run_name: exp_1
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1759990623609
+status: 3
+tags: []
+user_id: reem

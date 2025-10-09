@@ -1,0 +1,15 @@
+artifact_uri: mlflow-artifacts:/902338509008214741/90d4d9a56b9c4a9b86c897ff3dfabcda/artifacts
+deleted_time: 1760021533723
+end_time: 1759995281731
+entry_point_name: ''
+experiment_id: '902338509008214741'
+lifecycle_stage: deleted
+run_id: 90d4d9a56b9c4a9b86c897ff3dfabcda
+run_name: LightGBM_training_run
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1759995280646
+status: 3
+tags: []
+user_id: reem

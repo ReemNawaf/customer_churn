@@ -1,0 +1,10 @@
+artifact_location: mlflow-artifacts:/730291592822911968/models/m-35e54e1b4af341be8bfabb474d00e164/artifacts
+creation_timestamp: 1760021639760
+experiment_id: '730291592822911968'
+last_updated_timestamp: 1760021640890
+model_id: m-35e54e1b4af341be8bfabb474d00e164
+model_type: ''
+name: LightGBM
+source_run_id: d936e41a06534e4c8d651ad4effed6d2
+status: 2
+status_message: null

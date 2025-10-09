@@ -1,0 +1,15 @@
+artifact_uri: mlflow-artifacts:/685758591350241475/43713519fef941c98a08c05846eaf02b/artifacts
+deleted_time: 1759994159943
+end_time: 1759994016751
+entry_point_name: ''
+experiment_id: '685758591350241475'
+lifecycle_stage: deleted
+run_id: 43713519fef941c98a08c05846eaf02b
+run_name: sassy-mole-490
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1759994015648
+status: 3
+tags: []
+user_id: reem

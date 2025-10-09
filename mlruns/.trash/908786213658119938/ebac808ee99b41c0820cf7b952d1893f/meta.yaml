@@ -1,0 +1,15 @@
+artifact_uri: mlflow-artifacts:/908786213658119938/ebac808ee99b41c0820cf7b952d1893f/artifacts
+deleted_time: 1759994159953
+end_time: 1759994011009
+entry_point_name: ''
+experiment_id: '908786213658119938'
+lifecycle_stage: deleted
+run_id: ebac808ee99b41c0820cf7b952d1893f
+run_name: skillful-lark-557
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1759994009906
+status: 3
+tags: []
+user_id: reem

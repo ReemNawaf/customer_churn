@@ -1,0 +1,7 @@
+artifact_location: mlflow-artifacts:/274460156851307934
+creation_time: 1759993961128
+experiment_id: '274460156851307934'
+last_update_time: 1759994159942
+lifecycle_stage: deleted
+name: churn_prediction_LogisticRegression
+tags: {}

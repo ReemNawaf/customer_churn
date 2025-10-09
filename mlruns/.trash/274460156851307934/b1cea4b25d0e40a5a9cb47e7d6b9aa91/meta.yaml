@@ -1,0 +1,15 @@
+artifact_uri: mlflow-artifacts:/274460156851307934/b1cea4b25d0e40a5a9cb47e7d6b9aa91/artifacts
+deleted_time: 1759994159942
+end_time: 1759993962228
+entry_point_name: ''
+experiment_id: '274460156851307934'
+lifecycle_stage: deleted
+run_id: b1cea4b25d0e40a5a9cb47e7d6b9aa91
+run_name: bouncy-mule-683
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1759993961131
+status: 3
+tags: []
+user_id: reem
