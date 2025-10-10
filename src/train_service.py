@@ -200,9 +200,9 @@ class ChurnTrainingPipeline:
             f1 = f1_score(y_test, y_pred)
 
             metrics = {
-                "AUC": auc_score,
-                "F1": f1,
-                "Accuracy": acc,
+                "test_auc": auc_score,
+                "test_f1": f1,
+                "test_accuracy": acc,
             }
 
             # Plot ROC curve
@@ -239,7 +239,7 @@ class ChurnTrainingPipeline:
             }
             results.append(metrics)
 
-        results_df = pd.DataFrame(results).sort_values(by="AUC", ascending=False)
+        results_df = pd.DataFrame(results).sort_values(by="test_accuracy", ascending=False)
         log.info(f"\nModel Comparison:\n {results_df}")
         return results_df
 
