@@ -63,9 +63,9 @@ class ModelSelectionService:
         return runs_df
 
     # ---------------------------------------------------
-    #  Load certain model
+    #  Load registered model
     # ---------------------------------------------------
-    def mlflow_load_model(model_name, model_version):
+    def mlflow_load_model(self, model_name: str, model_version: str):
         model_uri = f"models:/{model_name}/{model_version}"
 
         if "XGB" in model_name:
@@ -87,14 +87,10 @@ class ModelSelectionService:
     # Register the model in MLflow Registry
     # ---------------------------------------------------
     def register_model(self, best_run, model_name="churn_model"):
-        model_uri = f"runs:/{best_run['run_id']}/{best_run['model_name']}"
+        model_run_name = best_run["model_name"].split("_")[0]
+        model_uri = f"runs:/{best_run['run_id']}/{model_run_name}"
         result = mlflow.register_model(model_uri=model_uri, name=model_name)
         log.info(f"Registered model '{model_name}' as version {result.version}")
-
-        # model_uri = f"runs:/{run_id}/model_name"
-
-        # with mlflow.start_run(run_id=run_id):
-        #     mlflow.register_model(model_uri=model_uri, name=model_name)
 
         return result
 
@@ -102,18 +98,9 @@ class ModelSelectionService:
     # Optionally promote to Staging/Production
     # ---------------------------------------------------
     def promote_model(self, model_name: str, version: int, stage: str = "Production"):
-        self.client.transition_model_version_stage(
-            name=model_name,
-            version=version,
-            stage=stage,
-            archive_existing_versions=True,
-        )
 
-        # move_model_to_production
-        # current_model_uri = f"models:/{model_name}@challenger"
-
-        # client = mlflow.MlflowClient()
-        # client.copy_model_version(src_model_uri=current_model_uri, dst_name=production_model_name)
+        # Assign alias "production" to this version
+        self.client.set_registered_model_alias(name=model_name, alias="production", version=version)
 
         log.info(f"Model '{model_name}' promoted to stage: {stage}")
 
@@ -126,5 +113,6 @@ if __name__ == "__main__":
 
     runs_df = selector.get_experiment_runs()
     best_run = selector.select_best_model(runs_df)
-    reg_result = selector.register_model(best_run, model_name="churn_model")
-    selector.promote_model("churn_model", reg_result.version, stage="Staging")
+    # reg_result = selector.register_model(best_run, model_name="churn_model")
+    # selector.promote_model("churn_model", '1', stage="Staging")
+    # selector.mlflow_load_model('churn_model', '1')
