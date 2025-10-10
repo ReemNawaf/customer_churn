@@ -1,7 +1,0 @@
-artifact_location: mlflow-artifacts:/540363323125039958
-creation_time: 1759993958115
-experiment_id: '540363323125039958'
-last_update_time: 1759994159944
-lifecycle_stage: deleted
-name: churn_prediction_RandomForest
-tags: {}

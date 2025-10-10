@@ -1,0 +1,14 @@
+artifact_uri: mlflow-artifacts:/289199534381690882/a34ae3070d9c4d09acfdb97e2a4ebeb7/artifacts
+end_time: 1760122248853
+entry_point_name: ''
+experiment_id: '289199534381690882'
+lifecycle_stage: active
+run_id: a34ae3070d9c4d09acfdb97e2a4ebeb7
+run_name: RandomForest_training_run
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1760122247651
+status: 3
+tags: []
+user_id: reem

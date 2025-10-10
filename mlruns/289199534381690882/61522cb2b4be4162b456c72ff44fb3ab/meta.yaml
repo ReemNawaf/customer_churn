@@ -1,0 +1,14 @@
+artifact_uri: mlflow-artifacts:/289199534381690882/61522cb2b4be4162b456c72ff44fb3ab/artifacts
+end_time: 1760122251661
+entry_point_name: ''
+experiment_id: '289199534381690882'
+lifecycle_stage: active
+run_id: 61522cb2b4be4162b456c72ff44fb3ab
+run_name: LogisticRegression_training_run
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1760122250561
+status: 3
+tags: []
+user_id: reem

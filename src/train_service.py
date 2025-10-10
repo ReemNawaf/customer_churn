@@ -18,22 +18,24 @@ import sys
 from pathlib import Path
 from typing import List, Optional
 
+import matplotlib.pyplot as plt
 import mlflow
 import mlflow.sklearn
 import numpy as np
 import pandas as pd
+import seaborn as sns
 from lightgbm import LGBMClassifier
 from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
 from sklearn.feature_selection import SelectFromModel
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import (
+from sklearn.metrics import (  # classification_report,
     accuracy_score,
-    classification_report,
     confusion_matrix,
     f1_score,
     roc_auc_score,
+    roc_curve,
 )
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
@@ -173,10 +175,9 @@ class ChurnTrainingPipeline:
     # ---------------------------------------------------
     # 5. Compare Models
     # ---------------------------------------------------
-    def compare_models(self, X_train, y_train, X_val, y_val) -> pd.DataFrame:
+    def evaluate_models(self, X_train, y_train, X_test, y_test) -> pd.DataFrame:
         results = []
         candidates = self.get_candidate_models()
-        input_example = X_train.sample(5)
 
         for name, item in candidates.items():
             model = item["model"]
@@ -191,24 +192,46 @@ class ChurnTrainingPipeline:
             )
 
             pipe.fit(X_train, y_train)
-            y_pred = pipe.predict(X_val)
-            y_proba = pipe.predict_proba(X_val)[:, 1] if hasattr(pipe, "predict_proba") else None
+            y_pred = pipe.predict(X_test)
+            y_prob = pipe.predict_proba(X_test)[:, 1] if hasattr(pipe, "predict_proba") else None
+
+            acc = accuracy_score(y_test, y_pred)
+            auc_score = roc_auc_score(y_test, y_prob)
+            f1 = f1_score(y_test, y_pred)
 
             metrics = {
-                "AUC": roc_auc_score(y_val, y_proba) if y_proba is not None else None,
-                "F1": f1_score(y_val, y_pred),
-                "Accuracy": accuracy_score(y_val, y_pred),
+                "AUC": auc_score,
+                "F1": f1,
+                "Accuracy": acc,
             }
+
+            # Plot ROC curve
+            roc_cur_path = f"reports/{name}_roc_curve.png"
+            fpr, tpr, _ = roc_curve(y_test, y_prob)
+            plt.figure(figsize=(6, 4))
+            plt.plot(fpr, tpr, label=f"ROC curve (AUC = {auc_score:.2f})")
+            plt.plot([0, 1], [0, 1], "k--")
+            plt.xlabel("False Positive Rate")
+            plt.ylabel("True Positive Rate")
+            plt.title(f"ROC Curve - {self.best_model_name}")
+            plt.legend(loc="lower right")
+            plt.tight_layout()
+            plt.savefig(roc_cur_path)
+
+            # Plot Confusion Matrix
+            con_mat_path = f"reports/{name}_confusion_matrix.png"
+            plt.figure(figsize=(4, 4))
+            cm = confusion_matrix(y_test, y_pred)
+            sns.heatmap(cm, annot=True, fmt="d", cmap="Blues")
+            plt.title(f"Confusion Matrix - {self.best_model_name}")
+            plt.xlabel("Predicted")
+            plt.ylabel("True")
+            plt.tight_layout()
+            plt.savefig(con_mat_path)
+            plt.close()
+
             if MLFLOW_LOGGING:
-                self.log_mlflow(
-                    name,
-                    param,
-                    metrics,
-                    model,
-                    input_example,
-                    X_train,
-                    y_train,
-                )
+                self.mlfow_log(name, param, metrics, model, roc_cur_path, con_mat_path)
 
             metrics = {
                 "Model": name,
@@ -220,45 +243,27 @@ class ChurnTrainingPipeline:
         log.info(f"\nModel Comparison:\n {results_df}")
         return results_df
 
-    # ---------------------------------------------------
-    # 6. Full Train on Best Model
-    # ---------------------------------------------------
-    def train_best_model(self, X_train_full, y_train_full, best_model_name: str):
-        candidates = self.get_candidate_models()
-        best_model = candidates[best_model_name]
+    # # ------------------------------------------------------
+    # # 7. EVALUATE
+    # # ------------------------------------------------------
+    # def evaluate(self, X_test, y_test, orig_cols: List[str]):
+    #     log.info("Evaluating model...")
+    #     y_pred = self.pipeline.predict(X_test)
+    #     y_prob = self.pipeline.predict_proba(X_test)[:, 1]
 
-        self.pipeline = Pipeline(
-            [
-                ("preprocessor", self.preprocessor),
-                ("selector", self.selector),
-                ("clf", best_model["model"]),
-            ]
-        )
-        self.pipeline.fit(X_train_full, y_train_full)
-        self.best_model_name = best_model_name
-        log.info(f"Best model retrained on full training set: {best_model_name}")
+    #     log.info("\nClassification Report:")
+    #     log.info(classification_report(y_test, y_pred))
 
-    # ------------------------------------------------------
-    # 7. EVALUATE
-    # ------------------------------------------------------
-    def evaluate(self, X_test, y_test, orig_cols: List[str]):
-        log.info("Evaluating model...")
-        y_pred = self.pipeline.predict(X_test)
-        y_prob = self.pipeline.predict_proba(X_test)[:, 1]
+    #     log.info(f"Confusion Matrix:\n {confusion_matrix(y_test, y_pred)}")
+    #     log.info(f"ROC-AUC: {roc_auc_score(y_test, y_prob)}")
+    #     log.info(f"Accuracy: {accuracy_score(y_test, y_pred)}")
 
-        log.info("\nClassification Report:")
-        log.info(classification_report(y_test, y_pred))
+    #     # Print selected features
+    #     selector = self.pipeline.named_steps["selector"]
+    #     support_mask = selector.get_support()
 
-        log.info(f"Confusion Matrix:\n {confusion_matrix(y_test, y_pred)}")
-        log.info(f"ROC-AUC: {roc_auc_score(y_test, y_prob)}")
-        log.info(f"Accuracy: {accuracy_score(y_test, y_pred)}")
-
-        # Print selected features
-        selector = self.pipeline.named_steps["selector"]
-        support_mask = selector.get_support()
-
-        log.info("\nSelected Features (after preprocessing):")
-        log.info(f"Total selected: {support_mask.sum()} of {len(support_mask)}")
+    #     log.info("\nSelected Features (after preprocessing):")
+    #     log.info(f"Total selected: {support_mask.sum()} of {len(support_mask)}")
 
     # ------------------------------------------------------
     # TRAIN
@@ -273,7 +278,7 @@ class ChurnTrainingPipeline:
         self.build_selector()
 
         # Compare candidate models
-        results_df = self.compare_models(X_train, y_train, X_test, y_test)
+        results_df = self.evaluate_models(X_train, y_train, X_test, y_test)
         print(results_df)
 
         # Pick the best model
@@ -281,18 +286,17 @@ class ChurnTrainingPipeline:
 
         # Retrain on full training data
         log.info(f"Training the best model ({best_model_name})...")
-        self.train_best_model(pd.concat([X_train, X_test]), pd.concat([y_train, y_test]), best_model_name)
 
-        self.print_selected_features()
+        # self.print_selected_features()
 
         log.info("Training complete.")
-        self.evaluate(X_test, y_test, X_train.columns)
+        # self.evaluate(X_test, y_test, X_train.columns)
 
     # ---------------------------------------------------
     # ML-Flow Functions
     # ---------------------------------------------------
 
-    def mlfow_log(self, name, params, metrics, model, input_example, X_train, y_train):
+    def mlfow_log(self, name, params, metrics, model, roc_cur_path, con_mat_path):
         log.info(f"Logging {name}: Parameters, Metrics, and Model")
 
         mlflow.set_tracking_uri("http://127.0.0.1:5000")
@@ -303,29 +307,17 @@ class ChurnTrainingPipeline:
             mlflow.log_params(params)
             mlflow.log_metrics(metrics)
 
-            mlflow.sklearn.log_model(sk_model=model, artifact_path=name, input_example=input_example, signature=mlflow.models.infer_signature(X_train, y_train))
+            if "XGB" in name:
+                mlflow.xgboost.log_model(xgb_model=model, name=name)
+            else:
+                mlflow.sklearn.log_model(sk_model=model, name=name)
 
-    def mlflow_register_model(model_name, run_id):
-        model_uri = f"runs:/{run_id}/model_name"
+            # log artificates as pictures
+            mlflow.log_artifact(roc_cur_path)
+            mlflow.log_artifact(con_mat_path)
+            mlflow.log_artifact(con_mat_path)
 
-        with mlflow.start_run(run_id=run_id):
-            mlflow.register_model(model_uri=model_uri, name=model_name)
-
-    def mlflow_load_model(model_name, model_version):
-        model_uri = f"models:/{model_name}/{model_version}"
-
-        if model_name == "XGBoost":
-            loaded_model = mlflow.xgboost.load_model(model_uri)
-        else:
-            loaded_model = mlflow.sklearn.load_model(model_uri)
-
-        return loaded_model
-
-    def move_model_to_production(model_name, production_model_name):
-        current_model_uri = f"models:/{model_name}@challenger"
-
-        client = mlflow.MlflowClient()
-        client.copy_model_version(src_model_uri=current_model_uri, dst_name=production_model_name)
+            # TODO: model artificates is stored however not shown to the ui
 
     # ---------------------------------------------------
     # Utility to Print Selected Features
@@ -343,16 +335,6 @@ class ChurnTrainingPipeline:
         log.info("Selected features:")
         log.info(f"{len(selected_features)} features were selected out of {len(all_features)}")
         log.info(f"{selected_features}")
-
-    # ------------------------------------------------------
-    # SAVE PIPELINE
-    # ------------------------------------------------------
-    def save_model(self, out_path: str = "models/churn_model.pkl"):
-        import joblib
-
-        Path(out_path).parent.mkdir(parents=True, exist_ok=True)
-        joblib.dump(self.pipeline, out_path)
-        log.info(f"Pipeline saved to {out_path}")
 
 
 # ==========================================================
