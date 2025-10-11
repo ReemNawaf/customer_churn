@@ -98,11 +98,21 @@ class ChurnTrainingPipeline:
         X = df.drop(columns=["userId", "auth_fail_ratio", self.target_col])
         y = df[self.target_col]
 
+        # Handle boolean columns before detecting dtypes
+        bool_cols = X.select_dtypes(include="bool").columns
+        if len(bool_cols) > 0:
+            log.info(f"Converting boolean columns: {list(bool_cols)} → int")
+            X[bool_cols] = X[bool_cols].astype(int)
+
         # detect categoricals
         cat_cols = X.select_dtypes(include=["object", "category"]).columns.tolist()
         num_cols = X.select_dtypes(include=[np.number]).columns.tolist()
 
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=self.test_size, random_state=self.random_state, stratify=y)
+
+        for col in cat_cols:
+            X_train[col] = X_train[col].astype("category")
+            X_test[col] = X_test[col].astype("category")
 
         return X_train, X_test, y_train, y_test, cat_cols, num_cols
 
@@ -142,32 +152,71 @@ class ChurnTrainingPipeline:
 
     def get_candidate_models(self):
         param = {
-            "RandomForest": {"n_estimators": 300, "class_weight": "balanced", "random_state": self.random_state, "n_jobs": -1},
-            "GradientBoosting": {"random_state": self.random_state},
-            "LogisticRegression": {"max_iter": 500, "class_weight": "balanced", "solver": "lbfgs", "random_state": self.random_state},
-            "XGBoost": {"n_estimators": 400, "max_depth": 6, "learning_rate": 0.05, "subsample": 0.8, "colsample_bytree": 0.8, "eval_metric": "logloss", "random_state": self.random_state},
-            "LightGBM": {"n_estimators": 400, "learning_rate": 0.05, "subsample": 0.8, "colsample_bytree": 0.8, "verbose": -1, "class_weight": "balanced", "random_state": self.random_state},
+            "RandomForest": {
+                "n_estimators": 300,
+                "class_weight": "balanced",
+                "random_state": self.random_state,
+                "n_jobs": -1,
+            },
+            "GradientBoosting": {
+                "random_state": self.random_state,
+            },
+            "LogisticRegression": {
+                "max_iter": 500,
+                "class_weight": "balanced",
+                "solver": "lbfgs",
+                "random_state": self.random_state,
+            },
+            "XGBoost": {
+                "n_estimators": 400,
+                "max_depth": 6,
+                "learning_rate": 0.05,
+                "subsample": 0.8,
+                "colsample_bytree": 0.8,
+                "eval_metric": "logloss",
+                "random_state": self.random_state,
+                "enable_categorical": True,
+                "use_label_encoder": False,
+            },
+            "LightGBM": {
+                "n_estimators": 400,
+                "learning_rate": 0.05,
+                "subsample": 0.8,
+                "colsample_bytree": 0.8,
+                "verbose": -1,
+                "class_weight": "balanced",
+                "random_state": self.random_state,
+            },
         }
+
+        def get_pipe(model):
+            return Pipeline(
+                [
+                    ("preprocessor", self.preprocessor),
+                    ("selector", self.selector),
+                    ("clf", model),
+                ]
+            )
 
         return {
             "RandomForest": {
-                "model": RandomForestClassifier(**param["RandomForest"]),
+                "pipe": get_pipe(RandomForestClassifier(**param["RandomForest"])),
                 "param": param["RandomForest"],
             },
             "GradientBoosting": {
-                "model": GradientBoostingClassifier(**param["GradientBoosting"]),
+                "pipe": get_pipe(GradientBoostingClassifier(**param["GradientBoosting"])),
                 "param": param["GradientBoosting"],
             },
             "LogisticRegression": {
-                "model": LogisticRegression(**param["LogisticRegression"]),
+                "pipe": get_pipe(LogisticRegression(**param["LogisticRegression"])),
                 "param": param["LogisticRegression"],
             },
             "XGBoost": {
-                "model": XGBClassifier(**param["XGBoost"]),
+                "pipe": XGBClassifier(**param["XGBoost"]),
                 "param": param["XGBoost"],
             },
             "LightGBM": {
-                "model": LGBMClassifier(**param["LightGBM"]),
+                "pipe": get_pipe(LGBMClassifier(**param["LightGBM"])),
                 "param": param["LightGBM"],
             },
         }
@@ -180,7 +229,7 @@ class ChurnTrainingPipeline:
         candidates = self.get_candidate_models()
 
         for name, item in candidates.items():
-            pipe = item["model"]
+            pipe = item["pipe"]
             param = item["param"]
 
             pipe.fit(X_train, y_train)
@@ -223,10 +272,10 @@ class ChurnTrainingPipeline:
             plt.close()
 
             if MLFLOW_LOGGING:
-                self.mlfow_log(name, param, metrics, pipe, roc_cur_path, con_mat_path)
+                self.mlfow_log(name, param, metrics, pipe, roc_cur_path, con_mat_path, X_train, y_train)
 
             metrics = {
-                "Model": name,
+                "pipe": name,
                 **metrics,
             }
             results.append(metrics)
@@ -274,7 +323,7 @@ class ChurnTrainingPipeline:
         print(results_df)
 
         # Pick the best model
-        best_model_name = results_df.iloc[0]["Model"]
+        best_model_name = results_df.iloc[0]["pipe"]
 
         # Retrain on full training data
         log.info(f"Training the best model ({best_model_name})...")
@@ -288,21 +337,21 @@ class ChurnTrainingPipeline:
     # ML-Flow Functions
     # ---------------------------------------------------
 
-    def mlfow_log(self, name, params, metrics, pipe, roc_cur_path, con_mat_path):
+    def mlfow_log(self, name, params, metrics, pipe, roc_cur_path, con_mat_path, X_train, y_train):
+        input_example = X_train.sample(5)
         log.info(f"Logging {name}: Parameters, Metrics, and Model")
 
         mlflow.set_tracking_uri("http://127.0.0.1:5000")
         mlflow.set_experiment("Churn")
 
         with mlflow.start_run(run_name=f"{name}_training_run"):
-
             mlflow.log_params(params)
             mlflow.log_metrics(metrics)
 
             if "XGB" in name:
-                mlflow.xgboost.log_model(xgb_model=pipe, name=name)
+                (mlflow.xgboost.log_model(xgb_model=pipe, name=name, input_example=input_example, signature=mlflow.models.infer_signature(X_train, y_train)),)
             else:
-                mlflow.sklearn.log_model(sk_model=pipe, name=name)
+                (mlflow.sklearn.log_model(sk_model=pipe, name=name, input_example=input_example, signature=mlflow.models.infer_signature(X_train, y_train)),)
 
             # log artificates as pictures
             mlflow.log_artifact(roc_cur_path)
@@ -333,7 +382,6 @@ class ChurnTrainingPipeline:
 #                     RUN EXAMPLE
 # ==========================================================
 if __name__ == "__main__":
-
     features_path = f"{Path().resolve()}/{cfg['data']['features_path']}"
     labels_path = f"{Path().resolve()}/{cfg['data']['labeled_path']}"
 

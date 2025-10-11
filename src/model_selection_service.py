@@ -63,19 +63,6 @@ class ModelSelectionService:
         return runs_df
 
     # ---------------------------------------------------
-    #  Load registered model
-    # ---------------------------------------------------
-    def mlflow_load_model(self, model_name: str, model_version: str):
-        model_uri = f"models:/{model_name}/{model_version}"
-
-        if "XGB" in model_name:
-            loaded_model = mlflow.xgboost.load_model(model_uri)
-        else:
-            loaded_model = mlflow.sklearn.load_model(model_uri)
-
-        return loaded_model
-
-    # ---------------------------------------------------
     #  Pick the best model (highest AUC)
     # ---------------------------------------------------
     def select_best_model(self, runs_df: pd.DataFrame):
@@ -98,11 +85,27 @@ class ModelSelectionService:
     # Optionally promote to Staging/Production
     # ---------------------------------------------------
     def promote_model(self, model_name: str, version: int, stage: str = "Production"):
-
         # Assign alias "production" to this version
         self.client.set_registered_model_alias(name=model_name, alias="production", version=version)
 
         log.info(f"Model '{model_name}' promoted to stage: {stage}")
+
+
+# ---------------------------------------------------
+#  Load registered model
+# ---------------------------------------------------
+def mlflow_load_model(model_name: str, model_version: str = "production", isProd: bool = True):
+    if isProd:
+        model_uri = f"models:/{model_name}@{model_version}"
+    else:
+        model_uri = f"models:/{model_name}/{model_version}"
+
+    if "XGB" in model_name:
+        loaded_model = mlflow.xgboost.load_model(model_uri)
+    else:
+        loaded_model = mlflow.sklearn.load_model(model_uri)
+
+    return loaded_model
 
 
 # ==========================================================
@@ -113,6 +116,6 @@ if __name__ == "__main__":
 
     runs_df = selector.get_experiment_runs()
     best_run = selector.select_best_model(runs_df)
-    # reg_result = selector.register_model(best_run, model_name="churn_model")
-    # selector.promote_model("churn_model", '1', stage="Staging")
+    reg_result = selector.register_model(best_run, model_name="churn_model")
+    selector.promote_model("churn_model", "1", stage="Staging")
     # selector.mlflow_load_model('churn_model', '1')

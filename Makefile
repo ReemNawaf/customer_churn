@@ -8,7 +8,7 @@ lint:
 	black --check .
 
 serve:
-	uv run uvicorn churn.api.app:app --host 0.0.0.0 --port 8000 --access-log
+	uv run uvicorn main:app --host 0.0.0.0 --port 8000 --access-log
 
 mlflow:
 	mlflow ui
