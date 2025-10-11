@@ -180,16 +180,8 @@ class ChurnTrainingPipeline:
         candidates = self.get_candidate_models()
 
         for name, item in candidates.items():
-            model = item["model"]
+            pipe = item["model"]
             param = item["param"]
-
-            pipe = Pipeline(
-                [
-                    ("preprocessor", self.preprocessor),
-                    ("selector", self.selector),
-                    ("clf", model),
-                ]
-            )
 
             pipe.fit(X_train, y_train)
             y_pred = pipe.predict(X_test)
@@ -231,7 +223,7 @@ class ChurnTrainingPipeline:
             plt.close()
 
             if MLFLOW_LOGGING:
-                self.mlfow_log(name, param, metrics, model, roc_cur_path, con_mat_path)
+                self.mlfow_log(name, param, metrics, pipe, roc_cur_path, con_mat_path)
 
             metrics = {
                 "Model": name,
@@ -296,7 +288,7 @@ class ChurnTrainingPipeline:
     # ML-Flow Functions
     # ---------------------------------------------------
 
-    def mlfow_log(self, name, params, metrics, model, roc_cur_path, con_mat_path):
+    def mlfow_log(self, name, params, metrics, pipe, roc_cur_path, con_mat_path):
         log.info(f"Logging {name}: Parameters, Metrics, and Model")
 
         mlflow.set_tracking_uri("http://127.0.0.1:5000")
@@ -308,9 +300,9 @@ class ChurnTrainingPipeline:
             mlflow.log_metrics(metrics)
 
             if "XGB" in name:
-                mlflow.xgboost.log_model(xgb_model=model, name=name)
+                mlflow.xgboost.log_model(xgb_model=pipe, name=name)
             else:
-                mlflow.sklearn.log_model(sk_model=model, name=name)
+                mlflow.sklearn.log_model(sk_model=pipe, name=name)
 
             # log artificates as pictures
             mlflow.log_artifact(roc_cur_path)
