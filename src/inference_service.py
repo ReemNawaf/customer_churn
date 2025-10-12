@@ -16,7 +16,7 @@ from mlflow.tracking import MlflowClient
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from configs.config import cfg
 from configs.logger import get_logger
-from model_selection_service import mlflow_load_model
+from training.model_selection_service import mlflow_load_model
 
 log = get_logger(__name__)
 
@@ -27,14 +27,7 @@ class ChurnInferenceService:
         self.client = MlflowClient()
         self.model_name = model_name
         self.stage = stage
-        self.model = self.load_model_from_registry()
-
-    # ---------------------------------------------------
-    # Load model from MLflow Model Registry
-    # ---------------------------------------------------
-    def load_model_from_registry(self):
-        model = mlflow_load_model(self.model_name)
-        return model
+        self.model = mlflow_load_model(self.model_name)
 
     # ---------------------------------------------------
     # Predict churn for incoming data
@@ -45,6 +38,7 @@ class ChurnInferenceService:
         Output: df with churn_proba, churn_pred
         """
         print("df", df)
+
         preds_proba = self.model.predict_proba(df)[:, 1]
         preds_label = (preds_proba > 0.5).astype(int)
 
@@ -58,7 +52,6 @@ class ChurnInferenceService:
 # RUN EXAMPLE (batch prediction)
 # ==========================================================
 if __name__ == "__main__":
-
     # TODO: add the pipeline for input (pre, feat)
 
     # Load processed + feature-ready data (simulate)
