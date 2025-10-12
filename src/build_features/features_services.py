@@ -40,7 +40,7 @@ log = get_logger(__name__)
 class FeatureBuilderService:
     """Aggregates structured logs into user-level features"""
 
-    def build_all_features(self, df_logs: pd.DataFrame, cutoff_date: pd.Timestamp = None) -> pd.DataFrame:
+    def build_features(self, df_logs: pd.DataFrame, cutoff_date: pd.Timestamp = None) -> pd.DataFrame:
         """
         Main pipeline: orchestrates all feature groups and returns full user-level matrix.
         """
@@ -682,7 +682,7 @@ if __name__ == "__main__":
 
     df_logs = preprocessor.parse_raw_events(obj)
     cutoff_date = feature_builder.compute_cutoff_date(df_logs)
-    features_df = feature_builder.build_all_features(df_logs, cutoff_date)
+    features_df = feature_builder.build_features(df_logs, cutoff_date)
 
     features_df.to_parquet(out_path, index=False)
     log.info(f"Features built: {features_df.shape}")
