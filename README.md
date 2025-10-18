@@ -182,5 +182,3 @@ Retraining **reuses the entire feature engineering pipeline** to stay consistent
 | Only tabular model  | No deep sequential modeling              | Add RNN/transformer on user history |
 | Offline monitoring  | Current drift is batch-based             | Add streaming monitoring             |
 | No explainability   | Predictions are not justified to user   | Add SHAP/LIME in inference API      |
-
---
