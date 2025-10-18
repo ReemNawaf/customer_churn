@@ -18,12 +18,14 @@ import sys
 from pathlib import Path
 from typing import List, Optional
 
+import joblib
 import matplotlib.pyplot as plt
 import mlflow
 import mlflow.sklearn
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from dotenv import load_dotenv
 from lightgbm import LGBMClassifier
 from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
@@ -47,24 +49,25 @@ from configs.config import cfg
 from configs.logger import get_logger
 
 log = get_logger(__name__)
+load_dotenv()
+os.getenv
+
+MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI")
 
 MLFLOW_LOGGING = True
 
 
-# ==========================================================
-#                       MAIN CLASS
-# ==========================================================
+# MAIN CLASS
 class ChurnTrainingPipeline:
     def __init__(
         self,
-        features_path: str,
-        labels_path: str,
+        features_df: pd.DataFrame,
+        labels_df: pd.DataFrame,
         target_col: str = "churn",
         test_size: float = 0.2,
         random_state: int = 42,
+        experiment_name: str = "Churn",
     ):
-        self.features_path = Path(features_path)
-        self.labels_path = Path(labels_path)
         self.target_col = target_col
         self.test_size = test_size
         self.random_state = random_state
@@ -72,30 +75,28 @@ class ChurnTrainingPipeline:
         self.preprocessor = None
         self.best_model_name = None
 
-        self.feature_df: Optional[pd.DataFrame] = None
-        self.labels_df: Optional[pd.DataFrame] = None
+        self.features_df = features_df
+        self.labels_df = labels_df
+
+        self.experiment_name = experiment_name
         self.model: Optional[RandomForestClassifier] = None
         self.selector: Optional[SelectFromModel] = None
         self.pipeline: Optional[Pipeline] = None
 
-    # ------------------------------------------------------
     # 1. LOAD DATA
-    # ------------------------------------------------------
-    def load_data(self):
-        log.info("Loading data...")
-        self.feature_df = pd.read_parquet(self.features_path)
-        self.labels_df = pd.read_parquet(self.labels_path)
-        log.info(f"Features: {self.feature_df.shape}, Labels: {self.labels_df.shape}")
+    def merge_data(self):
+        log.info(f"Features: {self.features_df.shape}, Labels: {self.labels_df.shape}")
 
         # merge to ensure aligned by userId
-        df = self.feature_df.merge(self.labels_df, on="userId", how="inner")
+        df = self.features_df.merge(self.labels_df, on="userId", how="inner")
         return df
 
-    # ------------------------------------------------------
     # 2. SPLIT DATA
-    # ------------------------------------------------------
     def split_data(self, df: pd.DataFrame):
-        X = df.drop(columns=["userId", "auth_fail_ratio", self.target_col])
+        if "auth_fail_ratio" in df.columns:
+            X = df.drop(columns=["auth_fail_ratio"])
+
+        X = df.drop(columns=["userId", self.target_col])
         y = df[self.target_col]
 
         # Handle boolean columns before detecting dtypes
@@ -116,9 +117,7 @@ class ChurnTrainingPipeline:
 
         return X_train, X_test, y_train, y_test, cat_cols, num_cols
 
-    # ------------------------------------------------------
     # 3. BUILD PREPROCESSOR
-    # ------------------------------------------------------
     def build_preprocessor(self, cat_cols: List[str], num_cols: List[str]):
         cat_pipe = Pipeline(
             steps=[
@@ -142,9 +141,7 @@ class ChurnTrainingPipeline:
         )
         return self.preprocessor
 
-    # ---------------------------------------------------
     # 4. Selector + Candidate Models
-    # ---------------------------------------------------
     def build_selector(self) -> SelectFromModel:
         rf_selector = RandomForestClassifier(n_estimators=200, max_depth=8, random_state=self.random_state, n_jobs=-1)
         self.selector = SelectFromModel(estimator=rf_selector, threshold="median")
@@ -221,9 +218,7 @@ class ChurnTrainingPipeline:
             },
         }
 
-    # ---------------------------------------------------
     # 5. Compare Models
-    # ---------------------------------------------------
     def evaluate_models(self, X_train, y_train, X_test, y_test) -> pd.DataFrame:
         results = []
         candidates = self.get_candidate_models()
@@ -284,34 +279,10 @@ class ChurnTrainingPipeline:
         log.info(f"\nModel Comparison:\n {results_df}")
         return results_df
 
-    # # ------------------------------------------------------
-    # # 7. EVALUATE
-    # # ------------------------------------------------------
-    # def evaluate(self, X_test, y_test, orig_cols: List[str]):
-    #     log.info("Evaluating model...")
-    #     y_pred = self.pipeline.predict(X_test)
-    #     y_prob = self.pipeline.predict_proba(X_test)[:, 1]
-
-    #     log.info("\nClassification Report:")
-    #     log.info(classification_report(y_test, y_pred))
-
-    #     log.info(f"Confusion Matrix:\n {confusion_matrix(y_test, y_pred)}")
-    #     log.info(f"ROC-AUC: {roc_auc_score(y_test, y_prob)}")
-    #     log.info(f"Accuracy: {accuracy_score(y_test, y_pred)}")
-
-    #     # Print selected features
-    #     selector = self.pipeline.named_steps["selector"]
-    #     support_mask = selector.get_support()
-
-    #     log.info("\nSelected Features (after preprocessing):")
-    #     log.info(f"Total selected: {support_mask.sum()} of {len(support_mask)}")
-
-    # ------------------------------------------------------
     # TRAIN
-    # ------------------------------------------------------
     def train(self):
         log.info("Load prepared features")
-        df = self.load_data()
+        df = self.merge_data()
         X_train, X_test, y_train, y_test, cat_cols, num_cols = self.split_data(df)
 
         log.info("Building preprocessing pipeline...")
@@ -324,25 +295,27 @@ class ChurnTrainingPipeline:
 
         # Pick the best model
         best_model_name = results_df.iloc[0]["pipe"]
+        log.info(f"The best model is: {best_model_name}")
 
-        # Retrain on full training data
-        log.info(f"Training the best model ({best_model_name})...")
+        # rebuild the best pipeline for full training
+        best_candidate = self.get_candidate_models()[best_model_name]["pipe"]
+        best_candidate.fit(pd.concat([X_train, X_test]), pd.concat([y_train, y_test]))
+
+        self.pipeline = best_candidate
+        self.best_model_name = best_model_name
 
         # self.print_selected_features()
 
         log.info("Training complete.")
         # self.evaluate(X_test, y_test, X_train.columns)
 
-    # ---------------------------------------------------
     # ML-Flow Functions
-    # ---------------------------------------------------
-
     def mlfow_log(self, name, params, metrics, pipe, roc_cur_path, con_mat_path, X_train, y_train):
         input_example = X_train.sample(5)
         log.info(f"Logging {name}: Parameters, Metrics, and Model")
 
-        mlflow.set_tracking_uri("http://127.0.0.1:5000")
-        mlflow.set_experiment("Churn")
+        mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+        mlflow.set_experiment(self.experiment_name)
 
         with mlflow.start_run(run_name=f"{name}_training_run"):
             mlflow.log_params(params)
@@ -357,12 +330,12 @@ class ChurnTrainingPipeline:
             mlflow.log_artifact(roc_cur_path)
             mlflow.log_artifact(con_mat_path)
             mlflow.log_artifact(con_mat_path)
+            X_train.to_parquet("mlartifacts/training_stats.parquet")
+            mlflow.log_artifact("mlartifacts/training_stats.parquet")
 
             # TODO: model artificates is stored however not shown to the ui
 
-    # ---------------------------------------------------
     # Utility to Print Selected Features
-    # ---------------------------------------------------
     def print_selected_features(self):
         # Get feature names after preprocessing
         all_features = self.pipeline.named_steps["preprocessor"].get_feature_names_out()
@@ -377,17 +350,35 @@ class ChurnTrainingPipeline:
         log.info(f"{len(selected_features)} features were selected out of {len(all_features)}")
         log.info(f"{selected_features}")
 
+    def save_model(self, out_path: str = "mlartifacts/models/churn_model.pkl") -> str:
+        """
+        Persist the trained pipeline (preprocessor + selector + classifier)
+        as a .pkl file for local loading or deployment (non-MLflow use).
+        """
 
-# ==========================================================
-#                     RUN EXAMPLE
-# ==========================================================
+        if self.pipeline is None:
+            raise RuntimeError("No pipeline trained yet. Call `train()` first.")
+
+        out_path = Path(out_path)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+
+        joblib.dump(self.pipeline, out_path)
+        log.info(f"[Model Saved] Trained pipeline stored at: {out_path.resolve()}")
+
+        return str(out_path.resolve())
+
+
+#   RUN EXAMPLE
 if __name__ == "__main__":
+    log.info("Loading data...")
     features_path = f"{Path().resolve()}/{cfg['data']['features_path']}"
     labels_path = f"{Path().resolve()}/{cfg['data']['labeled_path']}"
+    feature_df = pd.read_parquet(features_path)
+    labels_df = pd.read_parquet(labels_path)
 
     trainer = ChurnTrainingPipeline(
-        features_path=features_path,
-        labels_path=labels_path,
+        features_path=feature_df,
+        labels_path=labels_df,
     )
 
     trainer.train()

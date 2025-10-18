@@ -12,27 +12,28 @@ import sys
 
 import mlflow
 import pandas as pd
+from dotenv import load_dotenv
 from mlflow.tracking import MlflowClient
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-# from configs.config import cfg
 from configs.logger import get_logger
 
 log = get_logger(__name__)
+load_dotenv()
+os.getenv
 
 MLFLOW_LOGGING = True
+MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI")
 
 
 class ModelSelectionService:
-    def __init__(self, experiment_name: str = "Churn", tracking_uri: str = "http://127.0.0.1:5000"):
+    def __init__(self, experiment_name: str = "Churn", tracking_uri: str = MLFLOW_TRACKING_URI):
         self.tracking_uri = tracking_uri
         self.experiment_name = experiment_name
         mlflow.set_tracking_uri(self.tracking_uri)
         self.client = MlflowClient()
 
-    # ---------------------------------------------------
     #  Get all runs from the experiment
-    # ---------------------------------------------------
     def get_experiment_runs(self) -> pd.DataFrame:
         experiment = self.client.get_experiment_by_name(self.experiment_name)
         if experiment is None:
@@ -62,17 +63,13 @@ class ModelSelectionService:
         log.info(runs_df.head())
         return runs_df
 
-    # ---------------------------------------------------
     #  Pick the best model (highest AUC)
-    # ---------------------------------------------------
     def select_best_model(self, runs_df: pd.DataFrame):
         best_run = runs_df.sort_values("test_auc", ascending=False).iloc[0]
         log.info(f"Best model: {best_run['model_name']} (AUC={best_run['test_auc']:.4f})")
         return best_run
 
-    # ---------------------------------------------------
     # Register the model in MLflow Registry
-    # ---------------------------------------------------
     def register_model(self, best_run, model_name="churn_model"):
         model_run_name = best_run["model_name"].split("_")[0]
         model_uri = f"runs:/{best_run['run_id']}/{model_run_name}"
@@ -81,9 +78,7 @@ class ModelSelectionService:
 
         return result
 
-    # ---------------------------------------------------
     # Optionally promote to Staging/Production
-    # ---------------------------------------------------
     def promote_model(self, model_name: str, version: int, stage: str = "Production"):
         # Assign alias "production" to this version
         self.client.set_registered_model_alias(name=model_name, alias="production", version=version)
@@ -91,16 +86,14 @@ class ModelSelectionService:
         log.info(f"Model '{model_name}' promoted to stage: {stage}")
 
 
-# ---------------------------------------------------
 # Load model from MLflow Model Registry
-# ---------------------------------------------------
 def mlflow_load_model(model_name: str, model_version: str = "1", isProd: bool = False):
     if isProd:
-        model_uri = f"models:/{model_name}@{model_version}"
+        model_uri = f"models:/{model_name}@production"
     else:
         model_uri = f"models:/{model_name}/{model_version}"
 
-    print("ddd", model_uri)
+    log.info(f"model_uri {model_uri}")
     if "XGB" in model_name:
         loaded_model = mlflow.xgboost.load_model(model_uri)
     else:
@@ -109,9 +102,7 @@ def mlflow_load_model(model_name: str, model_version: str = "1", isProd: bool = 
     return loaded_model
 
 
-# ==========================================================
 # RUN EXAMPLE
-# ==========================================================
 if __name__ == "__main__":
     selector = ModelSelectionService(experiment_name="Churn")
 
