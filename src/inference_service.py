@@ -11,6 +11,7 @@ from pathlib import Path
 
 import mlflow
 import pandas as pd
+from dotenv import load_dotenv
 from mlflow.tracking import MlflowClient
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
@@ -19,10 +20,13 @@ from configs.logger import get_logger
 from training.model_selection_service import mlflow_load_model
 
 log = get_logger(__name__)
+load_dotenv()
+os.getenv
+MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI")
 
 
 class ChurnInferenceService:
-    def __init__(self, model_name: str = "churn_model", tracking_uri: str = "http://127.0.0.1:5000", stage: str = "production"):
+    def __init__(self, model_name: str = "churn_model", tracking_uri: str = MLFLOW_TRACKING_URI, stage: str = "production"):
         mlflow.set_tracking_uri(tracking_uri)
         self.client = MlflowClient()
         self.model_name = model_name
@@ -61,7 +65,7 @@ if __name__ == "__main__":
     data = pd.read_parquet(features_path)
 
     # Create inference service instance
-    service = ChurnInferenceService(model_name="churn_model", tracking_uri="http://127.0.0.1:5000", stage="production")
+    service = ChurnInferenceService()
 
     # Run prediction
     preds = service.predict(data)
