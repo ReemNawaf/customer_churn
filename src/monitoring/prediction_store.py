@@ -53,36 +53,71 @@ class PredictionStore:
         - df_features: original feature rows (must include userId)
         - df_predictions: columns ['userId','churn_probability','churn_label']
         """
+        print(df_predictions)
+
         if "userId" not in df_features.columns:
             raise ValueError("df_features must include 'userId' column")
-        if not {"userId", "churn_probability", "churn_label"}.issubset(df_predictions.columns):
+        if not {"userId", "churn_proba", "churn_pred"}.issubset(df_predictions.columns):
             raise ValueError("df_predictions must include userId, churn_probability, churn_label")
-
-        ts = (timestamp_utc or datetime.now(timezone.utc)).isoformat()
 
         # Merge features + preds on userId (left keeps features order)
         out = df_features.merge(df_predictions, on="userId", how="left").copy()
+
+        # Drop duplicates and suffixes (_x/_y)
+        out = out.loc[:, ~out.columns.duplicated()]  # remove duplicate columns
+        out.columns = [c.replace("_x", "").replace("_y", "") for c in out.columns]
+
+        # Standardize prediction column names
+        out = out.rename(
+            columns={
+                "churn_proba": "churn_probability",
+                "churn_pred": "churn_label",
+            }
+        )
+
+        ts = (timestamp_utc or datetime.now(timezone.utc)).isoformat()
 
         # Add metadata columns
         out.insert(0, "timestamp_utc", ts)
         out.insert(1, "request_id", request_id)
         out.insert(2, "model_name", model_name)
         out.insert(3, "model_stage", model_stage)
-        out.insert(4, "model_version", model_version if model_version is not None else "")
-        out.insert(5, "model_uri", model_uri if model_uri is not None else "")
+        out.insert(4, "model_version", model_version or "")
+        out.insert(5, "model_uri", model_uri or "")
 
-        # Store a compact JSON string of the features row for easy retrieval
-        # (You already keep expanded columns, but JSON is handy for audit)
-        feature_cols = [c for c in out.columns if c not in {"timestamp_utc", "request_id", "model_name", "model_stage", "model_version", "model_uri", "churn_probability", "churn_label"}]
+        # Keep only the required columns for the DB
+        # (store everything else inside features_json)
+        db_columns = [
+            "timestamp_utc",
+            "request_id",
+            "model_name",
+            "model_stage",
+            "model_version",
+            "model_uri",
+            "userId",
+            "churn_probability",
+            "churn_label",
+            "features_json",
+            "raw_payload_json",
+        ]
+
+        # Build features_json from all columns except the ones above
+        meta_cols = set(db_columns) - {"features_json", "raw_payload_json"}
+        feature_cols = [c for c in out.columns if c not in meta_cols]
         out["features_json"] = out[feature_cols].apply(lambda r: json.dumps(r.to_dict(), default=str), axis=1)
 
-        # Attach raw payload once per row (optional, useful for audits)
-        out["raw_payload_json"] = json.dumps(raw_payload, default=str) if raw_payload else ""
+        # Add raw_payload (same for all rows)
+        # out["raw_payload_json"] = json.dumps(raw_payload, default=str) if raw_payload else ""
 
-        # Persist to SQLite
+        # Filter strictly to DB schema columns
+        out = out[[c for c in db_columns if c in out.columns]]
+
+        print("out\n", out)
+
+        # Persist clean version to SQLite
         self._append_sqlite(out)
 
-        # Optionally also write a parquet snapshot per request_id (easy offline analysis)
+        # Also write a parquet snapshot per request_id (easy offline analysis)
         if self.parquet_dir:
             pq_path = self.parquet_dir / f"{request_id}.parquet"
             out.to_parquet(pq_path, index=False)

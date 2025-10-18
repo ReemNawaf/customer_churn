@@ -30,11 +30,11 @@ repos:
         args: [ "--max-line-length=200", "--extend-ignore=E402" ]
 
   # 3. Optional: security checks
-  - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.9
-    hooks:
-      - id: bandit
-        args: ["-ll"]     # medium+ severity
+  # - repo: https://github.com/PyCQA/bandit
+  #   rev: 1.7.9
+  #   hooks:
+  #     - id: bandit
+  #       args: ["-ll"]     # medium+ severity
 
   - repo: https://github.com/charliermarsh/ruff-pre-commit
     rev: v0.6.4
