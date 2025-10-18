@@ -1,0 +1,10 @@
+artifact_location: mlflow-artifacts:/645887656767677886/models/m-ecce9d63cece4e96bf805efaf556300e/artifacts
+creation_timestamp: 1760788479744
+experiment_id: '645887656767677886'
+last_updated_timestamp: 1760788480847
+model_id: m-ecce9d63cece4e96bf805efaf556300e
+model_type: ''
+name: GradientBoosting
+source_run_id: 1d6b209ad4c7496dbd70f8b428e7de40
+status: 2
+status_message: null

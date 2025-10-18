@@ -1,0 +1,14 @@
+artifact_uri: mlflow-artifacts:/645887656767677886/419e4277544448c1aa695888a919e0c5/artifacts
+end_time: 1760788483772
+entry_point_name: ''
+experiment_id: '645887656767677886'
+lifecycle_stage: active
+run_id: 419e4277544448c1aa695888a919e0c5
+run_name: XGBoost_training_run
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1760788482535
+status: 3
+tags: []
+user_id: reem

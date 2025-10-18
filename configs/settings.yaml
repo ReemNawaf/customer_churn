@@ -8,6 +8,14 @@ data:
   features_path: "data/processed/churn_features.parquet"
   predictions_path: "data/predictions/churn_predictions.parquet"
 
+
+report:
+  folder: reports
+
+tables:
+  path: "data/monitoring/predictions.db"
+  prediction_table: predictions
+
 model:
   type: "xgboost"
   test_size: 0.2
